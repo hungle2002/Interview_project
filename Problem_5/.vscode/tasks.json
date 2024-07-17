@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "restart inventory",
+      "type": "shell",
+      "command": "docker-compose restart inventory",
+      "presentation": {
+        "reveal": "never",
+      }
+    }
+  ]
+}

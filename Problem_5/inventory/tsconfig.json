@@ -1,0 +1,16 @@
+{
+  "extends": "@tsconfig/node18/tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ESNext"],
+    "outDir": "dist",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"],
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": ["src", "migrations/inventory-00-int.ts"],
+  "exclude": ["node_modules", "**/*.test.ts"],
+}

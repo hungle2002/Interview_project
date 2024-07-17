@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: interview_project
+      POSTGRES_HOST_AUTH_METHOD: trust
+    networks:
+      interview-v1-network: 
+
+  inventory:
+    build: 
+      context: ./inventory
+      dockerfile: Dockerfile.local
+    # restart: unless-stopped
+    ports:
+      - 7002:7002
+      # - 9229:9229 # for debugging
+    env_file:
+      - .env/.env
+      - .env/.postgres
+      - .env/.inventory
+    volumes:
+      - ./inventory:/usr/src/app
+      - /usr/src/app/.pnpm-store
+      - /usr/src/app/node_modules
+    command: pnpm start:docker
+    # depends_on:
+    #   - postgres
+    environment:
+      DATABASE_URL: postgres://postgres@postgres/interview_project
+      PORT: 7002
+    networks:
+      interview-v1-network:
+
+networks:
+  interview-v1-network:
+    external:
+      name: interview-v1-network

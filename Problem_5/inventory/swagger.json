@@ -1,0 +1,319 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "description": "Inventory API",
+    "version": "1.0.0",
+    "title": "Inventory",
+    "contact": {
+      "email": "lehung16082002@gmail.com"
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "ServerKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Server-Token"
+      }
+    },
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id" : {
+            "type": "integer"
+          },
+          "name" : {
+            "type": "string"
+          },
+          "description" : {
+            "type": "string"
+          },
+          "price" : {
+            "type": "integer"
+          },
+          "image": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/inventory/products": {
+      "get": {
+        "parameters": [
+          {
+          "in": "query",
+          "name": "name",
+          "description": "Name of the product",
+          "example": "Shirt",
+          "schema": {
+            "type": "string"
+          },
+          "required": false
+        },
+        {
+          "in": "query",
+          "name": "minPrice",
+          "description": "Min price of the product",
+          "example": "10",
+          "schema": {
+            "type": "integer"
+          },
+          "required": false
+        },
+        {
+          "in": "query",
+          "name": "maxPrice",
+          "description": "Max price of the product",
+          "example": "120",
+          "schema": {
+            "type": "integer"
+          },
+          "required": false
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "description": "Current page index",
+          "example": "1",
+          "schema": {
+            "type": "integer"
+          },
+          "required": false
+        },
+        {
+          "in": "query",
+          "name": "pageSize",
+          "description": "Number of products per page",
+          "example": "10",
+          "schema": {
+            "type": "integer"
+          },
+          "required": false
+        }],
+        "tags": ["Public"],
+        "summary": "Get list of products",
+        "responses": {
+          "200": {
+            "description": "OK\nList of products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request\n- Invalid query options"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Public"],
+        "summary": "Create a new product",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The product's name",
+                    "required": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "The product's description"
+                  },
+                  "price": {
+                    "type": "integer",
+                    "description": "The product's price",
+                    "required": true
+                  },
+                  "image": {
+                    "type": "string",
+                    "description": "The product's image"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request\n- Error message as per invalid parameter"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/inventory/products/{id}": {
+      "get": {
+        "parameters": [
+          {
+          "in": "path",
+          "name": "id",
+          "description": "Id of the product",
+          "example": "1",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }],
+        "tags": ["Public"],
+        "summary": "Get detail of a product",
+        "responses": {
+          "200": {
+            "description": "OK\nDetail of a product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request\n- Invalid product id."
+          },
+          "404": {
+            "description": "Not Found\n- Product not found."
+          },
+          "422" : {
+            "description": "Invalid request. Please review request and try again."
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of the product",
+            "example": "1",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Public"],
+        "summary": "Delete a product",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found\n- Product not found."
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "Id of the product",
+            "example": "1",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "tags": ["Public"],
+        "summary": "Update a product",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The product's name",
+                    "required": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "The product's description"
+                  },
+                  "price": {
+                    "type": "integer",
+                    "description": "The product's price",
+                    "required": true
+                  },
+                  "image": {
+                    "type": "string",
+                    "description": "The product's image"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found\n- Product not found."
+          },
+          "422" : {
+            "description": "Invalid request. Please review request and try again."
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    }
+  }
+}

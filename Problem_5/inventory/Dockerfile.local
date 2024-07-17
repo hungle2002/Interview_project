@@ -1,0 +1,23 @@
+FROM --platform=linux/amd64 node:18
+
+# Install pnpm globally
+RUN npm i -g pnpm
+
+# Create work directory
+WORKDIR /usr/src/app
+
+# COPY package.json to root directory
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# RUN prisma generation
+COPY prisma/schema.prisma ./prisma/
+RUN pnpm prisma generate
+
+# COPY everything from directory to docker build
+COPY . .
+
+# RUN CODE
+CMD [ "pnpm", "start" ]
+
+
