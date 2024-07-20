@@ -40,7 +40,7 @@ Here we need to save scores for all the users and also a separate table for savi
   - user_id (unique identifier for the user)
   - score (current score of the user)
   - last_updated (timestamp of the last score update)
-  - created_at (timestamp of the score create)
+  - created_at (timestamp of the score created)
 
 #### 2. Top Scores Table:
 - This table stores only the top 10 user scores and their corresponding user IDs.
@@ -57,17 +57,17 @@ Here we need to save scores for all the users and also a separate table for savi
 
 ### Authentication:
 - All API requests require user authentication using a JSON Web Token (JWT) in the authorization header. The token must be valid and have the necessary permissions to access the requested endpoint.
-- We need to implement the authorization checks on the server-side to ensure only authorized users can update scores. By parsing the JWT token, we can get the user_id and check if the user have enough right
-to update the score as well as the user score record exist or not. If sccore record not exist, we can create new record for the user
-- Here, I recommend to create an middleware on the gateway to parse the JWT token in the headers first, after that we can forward the request to the service with the user info for checking the right as well as
-protect the server.
+- We need to implement the authorization checks on the server side to ensure that only authorized users can update scores. By parsing the JWT token, we can get the user_id and check if the user has enough right
+to update the score as well as whether the user score record exists or not. If score record not exist, we can create a new record for the user
+- Here, I recommend creating a middleware on the gateway to parse the JWT token in the headers first, after that we can forward the request to the service with the user info for checking the right as well as
+protecting the server.
 ### Error Codes:
 The following error codes might be returned in the response body:
 
 - 400 Bad Request: Invalid request body format or missing required parameters.
 - 401 Unauthorized: Invalid or missing authorization token.
-- 403 Forbidden: User does not have permission to access the requested resource.
-- 404 Not Found: Resource not found (e.g., user with the provided ID doesn't exist).
+- 403 Forbidden: The user does not have permission to access the requested resource.
+- 404 Not Found: Resource not found (e.g., a user with the provided ID doesn't exist).
 - 500 Internal Server Error: Unexpected server error occurred.
 
 ### API Endpoints:
@@ -111,20 +111,20 @@ The following error codes might be returned in the response body:
 - Error Response: Refer to the error codes section above.
 
 ### Implement for API /api/v1/scores/update endpoint:
-In this API, we need to do two job:
-- Update score and scoreboard in the database
+In this API, we need to do two tasks:
+- Update the score and scoreboard in the database
 - Broadcast to all the user in case there is any change in the scoreboard list
 
 #### 1. Update score and scoreboard in the database:
-Here, we don't necessarily need to update both tables every single time a user score is updated. Instead, there are two solution to udpate scoreboard table
+Here, we don't necessarily need to update both tables every single time a user score is updated. Instead, there are two solutions to update scoreboard table
 ##### Updating User Score:
 - When a user completes an action triggering a score update:
   - Update the user's score and last_updated in the user_scores Table.
 ##### Updating Top Scores:
 - After updating the User Scores table:
-  - Check if the user's new score qualifies for the top 10 bu combining the new score with the current lowest score in the Top Scores table.
+  - Check if the user's new score qualifies for the top 10 by combining the new score with the current lowest score in the Top Scores table.
 - If the new score qualifies for the top 10:
-  - Update the Top Scores table by updating the ranking or add new score and remove the one no longer qualifies for the top 10
+  - Update the Top Scores table by updating the ranking or add a new score and remove the one no longer qualifies for the top 10
 - If the new score doesn't qualify for the top 10:
   - No further action is needed on the Top Scores table.
  
@@ -133,12 +133,12 @@ For implementing this, there are two solution:
 - Background Jobs: Implement a background job processing system that periodically checks for score updates and updates the Top Scores table accordingly.
 
 In this module, I recommend to use background jobs for two main reasons:
-- Improved Performance: Background jobs are processed separately from the main application thread without afftecting to the performance of our module.
-- Scalability: Background jobs can be scaled independently by adding more resource.
+- Improved Performance: Background jobs are processed separately from the main application thread without affecting the performance of our module.
+- Scalability: Background jobs can be scaled independently by adding more resources.
 
-Here, I decide to use a message queue (RabbitMQ) for implement background job.
+Here, I decide to use a message queue (RabbitMQ) to implement the background job.
 ##### Score Update Process:
-1. User completes an action, triggering a request to update their score.
+1. The user completes an action, triggering a request to update their score.
 2. The main application updates the user's score in the User Scores Table.
 3. The update information (user ID and new score) is added to a message queue (RabbitMQ) instead of directly updating the Top Scores table.
 
@@ -153,10 +153,11 @@ Here, I decide to use a message queue (RabbitMQ) for implement background job.
 - There will be a delay between when a user's score is updated and when that change is reflected in the Top Scores table.
 - However, the Top Scores table will eventually be updated to reflect the latest rankings. The API retrieves data directly from this table, ensuring it provides the most recent leaderboard information available at that time.
 - To reduce the delay, we can make the background service to check the RabbitMQ queue more frequently
+- We can also reduce the query time for the scoreboard by implementing the cache
 
-#### 2. Broadcast to all the user in case there is any change in the scoreboard list
-- Everytime we receive a updation score from the user and this affect to our scoreboard, we need to notice all the client immediately to ensure realtime updation. To do this, I recommend to use Websocket to send
-message to all the connected Web Browser.
-- We can save all the active channel on the server and send the modified ranking scores to all the active users to update the scoreboard.
+#### 2. Broadcast to all the users in case there is any change in the scoreboard list
+- Every time we receive an updation score from the user and this affects our scoreboard, we need to notify all the clients immediately to ensure real-time updation. To do this, I recommend to use Websocket to send
+message to all the connected Web browsers.
+- We can save all the active channels on the server and send the modified ranking scores to all the active users to update the scoreboard.
   
 
