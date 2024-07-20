@@ -130,7 +130,7 @@ In this API, we need to do two tasks:
 - If the new score doesn't qualify for the top 10:
   - No further action is needed on the Redis.
  
-##### Note:
+#### *** Note ***
 We need to ensure the cached top 10 list (Redis) remains consistent with the actual user scores stored in the database ("scores" table) by implementing Cache expiration and Updating the cache frequently.
 1. Setting Cache Expiration in Redis
 - Set an expiration time for the cached top 10 list in Redis. This ensures the cached data doesn't become old indefinitely.
