@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: interview_project
       POSTGRES_HOST_AUTH_METHOD: trust
     networks:
-      interview-v1-network: 
+      interview-v2-network: 
 
   inventory:
     build: 
@@ -32,9 +32,9 @@ services:
       DATABASE_URL: postgres://postgres@postgres/interview_project
       PORT: 7002
     networks:
-      interview-v1-network:
+      interview-v2-network:
 
 networks:
-  interview-v1-network:
+  interview-v2-network:
     external:
-      name: interview-v1-network
+      name: interview-v2-network

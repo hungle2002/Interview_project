@@ -20,7 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.5.2",
+    "@prisma/client": "^5.17.0",
     "axios": "^1.6.7",
     "cloudinary": "^2.2.0",
     "cors": "^2.8.5",
@@ -47,7 +47,7 @@
     "@typescript-eslint/parser": "^6.9.1",
     "eslint": "^8.52.0",
     "http": "0.0.1-security",
-    "prisma": "^5.5.2",
+    "prisma": "^5.17.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.1"
   },
