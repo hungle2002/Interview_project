@@ -32,7 +32,7 @@ existing website to provide a dynamic and secure scorekeeping system.
 - When a user's score changes, the server can push the updated scoreboard to all connected clients in real time using web sockets.
 
 ## Requirements:
-Here we need to save scores for all the users and also a separate table for saving the top 10 users for the scoreboard for faster query in the first time.
+Here we need to save scores for all the users and also a separate table for saving the top 10 users for the scoreboard for faster query the first time get the scoreboard.
 ### Database design
 #### 1. User Scores Table:
 - This table stores individual user scores and related data.
@@ -48,4 +48,77 @@ Here we need to save scores for all the users and also a separate table for savi
   - rank (position in the leaderboard)
   - user_id (foreign key referencing the User Scores table)
   - score (current score of the user at this rank)
+
+<br />
+<div align="center">
+  <img src="images/erdDatabase.png" alt="Logo" width="450">
+  <p>Diagram 1. Illustration database ERD</p>
+</div>
+
+### Authentication:
+- All API requests require user authentication using a JSON Web Token (JWT) in the authorization header. The token must be valid and have the necessary permissions to access the requested endpoint.
+- We need to implement the authorization checks on the server-side to ensure only authorized users can update scores. By parsing the JWT token, we can get the user_id and check if the user have enough right
+to update the score as well as the user score record exist or not. If sccore record not exist, we can create new record for the user
+- Here, I recommend to create an middleware on the gateway to parse the JWT token in the headers first, after that we can forward the request to the service with the user info for checking the right as well as
+protect the server.
+### Error Codes:
+The following error codes might be returned in the response body:
+
+- 400 Bad Request: Invalid request body format or missing required parameters.
+- 401 Unauthorized: Invalid or missing authorization token.
+- 403 Forbidden: User does not have permission to access the requested resource.
+- 404 Not Found: Resource not found (e.g., user with the provided ID doesn't exist).
+- 500 Internal Server Error: Unexpected server error occurred.
+
+### API Endpoints:
+#### 1. GET /api/v1/scores/leaderboard
+- Description: Retrieves the top 10 user scores and their corresponding user IDs.
+- Success Response:
+   ```
+  {
+    "data": [
+      {
+        "rank": 1,
+        "user_id": 11,
+        "score": 900
+      },
+      {
+        "rank": 2,
+        "user_id": 13,
+        "score": 856
+      },
+      // ... (other top 10 entries)
+    ]
+  }
+   ```
+- Error Response: Refer to the error codes section above.
+
+#### 2. POST /api/v1/scores/update
+- Description: Updates a user's score upon completion of an action.
+- Request Body:
+  ```
+  {
+    "user_id": (integer),  // Unique identifier of the user
+    "score_delta": (integer),  // Amount to increase the user's score
+  }
+   ```
+- Success Response:
+   ```
+  {
+    "message": "Score updated successfully"
+  }
+   ```
+- Error Response: Refer to the error codes section above.
+
+### Implement for API /api/v1/scores/update endpoint:
+In this API, we need to do two job:
+- Update score as well as scoreboard in the database
+- Broadcast to all the user in case there is any change in the scoreboard list
+
+#### 1. Update score as well as scoreboard in the database:
+Here, we don't necessarily need to update both tables every single time a user score is updated. Instead, there are two solution to udpate scoreboard table
+- Updating User Score:
+- Updating Top Scores:
+
+  
 
