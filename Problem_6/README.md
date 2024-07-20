@@ -27,27 +27,23 @@ existing website to provide a dynamic and secure scorekeeping system.
  - WebSockets are easier to implement and require less infrastructure than Kafka.
  - The number of users is limited so Kafka may be an overkill for this module.
  - WebSockets deliver updates only to connected clients interested in the scoreboard. With Kafka, messages might be sent to a broader audience depending on the topic configuration, potentially creating unnecessary processing.
- ### Websocket
-- Websockets provide a direct, two-way communication channel between the web browser and the server.
-- When a user's score changes, the server can push the updated scoreboard to all connected clients in real time using web sockets.
+
+Besides, for faster querying the list of top 10 users, there are two choices: in-memory data and cached database. Here I recommend using a cached database (Redis) for two main reasons:
+- Scalability: Caches like Redis are designed for distributed environments and can be scaled horizontally (adding more servers) to handle an increasing user base or update volume. While, in-memory data is limited to the available memory of a single server, making it less scalable. In case later we want to save a list of the top 1000 users or other data, we do not need to change the system design.
+- Centralized Management: Redis provides a central location for managing our top 10 list, helping us to access and monitor more easily.
 
 ## Requirements:
 Here we need to save scores for all the users and also a separate table for saving the top 10 users for the scoreboard for faster query the first time get the scoreboard.
 ### Database design
-#### 1. User Scores Table:
+#### User Scores Table:
 - This table stores individual user scores and related data.
 - Columns include:
   - user_id (unique identifier for the user)
   - score (current score of the user)
   - last_updated (timestamp of the last score update)
   - created_at (timestamp of the score created)
-
-#### 2. Top Scores Table:
-- This table stores only the top 10 user scores and their corresponding user IDs.
-- Columns include:
-  - rank (position in the leaderboard)
-  - user_id (foreign key referencing the User Scores table)
-  - score (current score of the user at this rank)
+#### Index on Score column:
+Here, to optimize the query we need to create a single index on the score column so that later when we want to get the top 10 list it will be faster.
 
 <br />
 <div align="center">
@@ -57,8 +53,8 @@ Here we need to save scores for all the users and also a separate table for savi
 
 ### Authentication:
 - All API requests require user authentication using a JSON Web Token (JWT) in the authorization header. The token must be valid and have the necessary permissions to access the requested endpoint.
-- We need to implement the authorization checks on the server side to ensure that only authorized users can update scores. By parsing the JWT token, we can get the user_id and check if the user has enough right
-to update the score as well as whether the user score record exists or not. If score record not exist, we can create a new record for the user
+- We need to implement the authorization checks on the server side to ensure that only authorized users can update scores. By parsing the JWT token, we can get the user_id and check if the user has enough rights
+to update the score as well as whether the user score record exists or not. If the score record does not exist, we can create a new record for the user
 - Here, I recommend creating a middleware on the gateway to parse the JWT token in the headers first, after that we can forward the request to the service with the user info for checking the right as well as
 protecting the server.
 ### Error Codes:
@@ -111,53 +107,39 @@ The following error codes might be returned in the response body:
 - Error Response: Refer to the error codes section above.
 
 ### Implement for API /api/v1/scores/update endpoint:
-In this API, we need to do two tasks:
-- Update the score and scoreboard in the database
-- Broadcast to all the user in case there is any change in the scoreboard list
 
-#### 1. Update score and scoreboard in the database:
-Here, we don't necessarily need to update both tables every single time a user score is updated. Instead, there are two solutions to update scoreboard table
+<br />
+<div align="center">
+  <img src="images/workflow.png" alt="Logo" width="1000">
+  <p>Diagram 2. Illustration workflow of score updation</p>
+</div>
+
+In this API, we need to do two tasks:
+- Update the score and top 10 scores in the cached database (Redis)
+- Broadcast to all the users in case there is any change in the scoreboard list
+
+#### 1. Update the score and scoreboard in the cached database (Redis)
 ##### Updating User Score:
 - When a user completes an action triggering a score update:
   - Update the user's score and last_updated in the user_scores Table.
-##### Updating Top Scores:
+##### Updating top 10 scores in Redis:
 - After updating the User Scores table:
-  - Check if the user's new score qualifies for the top 10 by combining the new score with the current lowest score in the Top Scores table.
+  - Check if the user's new score qualifies for the top 10 by combining the new score with the current lowest score in the Redis.
 - If the new score qualifies for the top 10:
-  - Update the Top Scores table by updating the ranking or add a new score and remove the one no longer qualifies for the top 10
+  - Update the Top 10 scores in Redis by updating the ranking or add a new score and remove the one that no longer qualifies for the top 10
 - If the new score doesn't qualify for the top 10:
-  - No further action is needed on the Top Scores table.
+  - No further action is needed on the Redis.
  
-For implementing this, there are two solution:
-- Triggers: Set up database triggers on the User Scores table to automatically initiate the Top Scores update logic whenever a user score changes.
-- Background Jobs: Implement a background job processing system that periodically checks for score updates and updates the Top Scores table accordingly.
-
-In this module, I recommend to use background jobs for two main reasons:
-- Improved Performance: Background jobs are processed separately from the main application thread without affecting the performance of our module.
-- Scalability: Background jobs can be scaled independently by adding more resources.
-
-Here, I decide to use a message queue (RabbitMQ) to implement the background job.
-##### Score Update Process:
-1. The user completes an action, triggering a request to update their score.
-2. The main application updates the user's score in the User Scores Table.
-3. The update information (user ID and new score) is added to a message queue (RabbitMQ) instead of directly updating the Top Scores table.
-
-##### Background Job Processing:
-- A separate background service monitors the RabbitMQ queue.
-- The service periodically retrieves messages from the queue every second
-- For each retrieved message:
-  - The worker retrieves the user's complete information from the User Scores table.
-  - It checks if the new score qualifies for the top 10 positions based on the current Top Scores table.
-  - If the score qualifies, the worker updates the Top Scores table accordingly (insert, update, or delete).
 ##### Note:
-- There will be a delay between when a user's score is updated and when that change is reflected in the Top Scores table.
-- However, the Top Scores table will eventually be updated to reflect the latest rankings. The API retrieves data directly from this table, ensuring it provides the most recent leaderboard information available at that time.
-- To reduce the delay, we can make the background service to check the RabbitMQ queue more frequently
-- We can also reduce the query time for the scoreboard by implementing the cache
-
+We need to ensure the cached top 10 list (Redis) remains consistent with the actual user scores stored in the database ("scores" table) by implementing Cache expiration and Updating the cache frequently.
+1. Setting Cache Expiration in Redis
+- Set an expiration time for the cached top 10 list in Redis. This ensures the cached data doesn't become old indefinitely.
+2. Updating the cache frequently
+- Implement a background job to periodically refresh the cached top 10 list with the latest data from the database before it expires.
+- We should set a short expiration time for the cached top 10 list. This ensures more frequent updates from the background job, reducing the time users might see outdated data. (During the short period between cache expiration and the background job updating it, users might see slightly outdated data in the top 10 list)
 #### 2. Broadcast to all the users in case there is any change in the scoreboard list
-- Every time we receive an updation score from the user and this affects our scoreboard, we need to notify all the clients immediately to ensure real-time updation. To do this, I recommend to use Websocket to send
-message to all the connected Web browsers.
-- We can save all the active channels on the server and send the modified ranking scores to all the active users to update the scoreboard.
+- Every time we receive an updation score from the user and this affects our scoreboard, we need to notify all the clients immediately to ensure real-time updation. To do this, I recommend using Websocket to send
+messages to all the connected Web browsers.
+- We can save all the active channels on the server and send the modified ranking scores to all the active users to update the Top 10 scores.
   
 
