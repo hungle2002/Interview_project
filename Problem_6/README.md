@@ -112,13 +112,51 @@ The following error codes might be returned in the response body:
 
 ### Implement for API /api/v1/scores/update endpoint:
 In this API, we need to do two job:
-- Update score as well as scoreboard in the database
+- Update score and scoreboard in the database
 - Broadcast to all the user in case there is any change in the scoreboard list
 
-#### 1. Update score as well as scoreboard in the database:
+#### 1. Update score and scoreboard in the database:
 Here, we don't necessarily need to update both tables every single time a user score is updated. Instead, there are two solution to udpate scoreboard table
-- Updating User Score:
-- Updating Top Scores:
+##### Updating User Score:
+- When a user completes an action triggering a score update:
+  - Update the user's score and last_updated in the user_scores Table.
+##### Updating Top Scores:
+- After updating the User Scores table:
+  - Check if the user's new score qualifies for the top 10 bu combining the new score with the current lowest score in the Top Scores table.
+- If the new score qualifies for the top 10:
+  - Update the Top Scores table by updating the ranking or add new score and remove the one no longer qualifies for the top 10
+- If the new score doesn't qualify for the top 10:
+  - No further action is needed on the Top Scores table.
+ 
+For implementing this, there are two solution:
+- Triggers: Set up database triggers on the User Scores table to automatically initiate the Top Scores update logic whenever a user score changes.
+- Background Jobs: Implement a background job processing system that periodically checks for score updates and updates the Top Scores table accordingly.
 
+In this module, I recommend to use background jobs for two main reasons:
+- Improved Performance: Background jobs are processed separately from the main application thread without afftecting to the performance of our module.
+- Scalability: Background jobs can be scaled independently by adding more resource.
+
+Here, I decide to use a message queue (RabbitMQ) for implement background job.
+##### Score Update Process:
+1. User completes an action, triggering a request to update their score.
+2. The main application updates the user's score in the User Scores Table.
+3. The update information (user ID and new score) is added to a message queue (RabbitMQ) instead of directly updating the Top Scores table.
+
+##### Background Job Processing:
+- A separate background service monitors the RabbitMQ queue.
+- The service periodically retrieves messages from the queue every second
+- For each retrieved message:
+  - The worker retrieves the user's complete information from the User Scores table.
+  - It checks if the new score qualifies for the top 10 positions based on the current Top Scores table.
+  - If the score qualifies, the worker updates the Top Scores table accordingly (insert, update, or delete).
+##### Note:
+- There will be a delay between when a user's score is updated and when that change is reflected in the Top Scores table.
+- However, the Top Scores table will eventually be updated to reflect the latest rankings. The API retrieves data directly from this table, ensuring it provides the most recent leaderboard information available at that time.
+- To reduce the delay, we can make the background service to check the RabbitMQ queue more frequently
+
+#### 2. Broadcast to all the user in case there is any change in the scoreboard list
+- Everytime we receive a updation score from the user and this affect to our scoreboard, we need to notice all the client immediately to ensure realtime updation. To do this, I recommend to use Websocket to send
+message to all the connected Web Browser.
+- We can save all the active channel on the server and send the modified ranking scores to all the active users to update the scoreboard.
   
 
