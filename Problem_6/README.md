@@ -40,7 +40,7 @@ Here we need to save scores for all the users and also a separate table for savi
 - Columns include:
   - user_id (unique identifier for the user)
   - score (current score of the user)
-  - last_updated (timestamp of the last score update)
+  - updated_at (timestamp of the last score update)
   - created_at (timestamp of the score created)
 #### Index on Score column:
 Here, to optimize the query we need to create a single index on the score column so that later when we want to get the top 10 list it will be faster.
@@ -121,7 +121,7 @@ In this API, we need to do two tasks:
 #### 1. Update the score and scoreboard in the cached database (Redis)
 ##### Updating User Score:
 - When a user completes an action triggering a score update:
-  - Update the user's score and last_updated in the user_scores Table.
+  - Update the user's score in the user_scores Table.
 ##### Updating top 10 scores in Redis:
 - After updating the User Scores table:
   - Check if the user's new score qualifies for the top 10 by combining the new score with the current lowest score in the Redis.
