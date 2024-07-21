@@ -39,7 +39,7 @@ $ npm install -g pnpm
 $ git clone https://github.com/hungle2002/Le_Quoc_Hung
 
 # Go into the repository
-$ cd Le_Quoc_Hung
+$ cd Le_Quoc_Hung/Problem_5
 
 # Create a docker network
 $ docker network create interview-v1-network
